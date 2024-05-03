@@ -81,7 +81,6 @@ def eval_gridsearch(clf, pgrid, xTrain, yTrain, xTest, yTest):
     grid_search = GridSearchCV(clf, pgrid, cv = 5) 
     grid_search.fit(xTrain, yTrain) 
     bestParams = grid_search.best_params_
-    print(bestParams)
 
     final_clf = grid_search.best_estimator_
     reg = final_clf.fit(xTrain, yTrain)
@@ -98,12 +97,13 @@ def eval_gridsearch(clf, pgrid, xTrain, yTrain, xTest, yTest):
     #         new_ypred[i] = int(0)
     # new_ypred = np.array(new_ypred)
 
-    # fpr, tpr, thresholds = metrics.roc_curve(yTest, ypred)
+    #fpr, tpr, thresholds = metrics.roc_curve(yTest, ypred)
     roc["fpr"] = 1
     roc["tpr"] = 2
 
     time_lr = time.time() - start
-    resultDict = {
+    resultDict = {'Accuracy': accuracy_score(ypred, yTest),
+        'Best Parameters': bestParams,
         'Time': time_lr}
     # resultDict = {
     #     'AUPRC': average_precision_score(yTest, ypred),
@@ -124,18 +124,46 @@ def main():
     job_types= label_encoder.fit_transform(job_types)
     vectorizer = CountVectorizer()
     X = vectorizer.fit_transform(soft_skills)
-
     xTrain, xTest, yTrain, yTest = train_test_split(X, job_types, test_size=0.3)
 
+    #K Nearest Neighbors
     parameters = {}
-    parameters["n_neighbors"] = [5,10,15]
-    #parameters["algorithm"] = ['ball_tree', 'kd_tree', 'brute']
+    parameters["n_neighbors"] = [5,10,50,100,200]
 
     knnClf = KNeighborsClassifier()
-    perfDict, rocDF, bestParamDict = eval_gridsearch(knnClf, parameters, xTrain, yTrain, xTest, yTest)
+    #perfDict, rocDF, bestParamDict = eval_gridsearch(knnClf, parameters, xTrain, yTrain, xTest, yTest)
+    print("KNN")
     print(perfDict)
     print(rocDF)
     print(bestParamDict)
+
+    #Decision Tree
+    parameters = {}
+    parameters["criterion"] = ["gini", "entropy"]
+    parameters["max_depth"] = [1,5,10]
+    parameters["min_samples_leaf"] = [5,10,15]
+
+    dtclf = DecisionTreeClassifier()
+    perfDict, rocDF, bestParamDict = eval_gridsearch(dtclf, parameters, xTrain, yTrain, xTest, yTest)
+    print("Decision Tree")
+    print(perfDict)
+    print(rocDF)
+    print(bestParamDict)
+
+    #Neural Networks
+    parameters = {}
+    parameters["activation"] = ['identity', 'logistic', 'tanh']
+    parameters["max_iter"] = [100,200,300]
+
+    mlpclf = MLPClassifier(max_iter=10)
+    #perfDict, rocDF, bestParamDict = eval_gridsearch(mlpclf, parameters, xTrain, yTrain, xTest, yTest)
+    print("Neural Networks")
+    print(perfDict)
+    print(rocDF)
+    print(bestParamDict)
+
+
+
                             
 
 if __name__ == "__main__":
