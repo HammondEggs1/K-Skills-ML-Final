@@ -81,10 +81,11 @@ def eval_gridsearch(clf, pgrid, xTrain, yTrain, xTest, yTest):
     grid_search = GridSearchCV(clf, pgrid, cv = 5) 
     grid_search.fit(xTrain, yTrain) 
     bestParams = grid_search.best_params_
+    print(bestParams)
 
     final_clf = grid_search.best_estimator_
     reg = final_clf.fit(xTrain, yTrain)
-    ypred = final_clf.predict_proba(xTest)
+    ypred = final_clf.predict(xTest)
 
     # new_ypred = []
     # for i in ypred:
@@ -97,15 +98,17 @@ def eval_gridsearch(clf, pgrid, xTrain, yTrain, xTest, yTest):
     #         new_ypred[i] = int(0)
     # new_ypred = np.array(new_ypred)
 
-    #fpr, tpr, thresholds = metrics.roc_curve(yTest, ypred)
+    # fpr, tpr, thresholds = metrics.roc_curve(yTest, ypred)
     roc["fpr"] = 1
     roc["tpr"] = 2
 
     time_lr = time.time() - start
-    resultDict = {'AUC': roc_auc_score(yTest, ypred, multi_class='ovr'),
-        'AUPRC': average_precision_score(yTest, ypred),
-        'F1': f1_score(yTest, ypred),
+    resultDict = {
         'Time': time_lr}
+    # resultDict = {
+    #     'AUPRC': average_precision_score(yTest, ypred),
+    #     'F1': f1_score(yTest, ypred),
+    #     'Time': time_lr}
     
     return resultDict, roc, bestParams
 
@@ -113,7 +116,7 @@ def eval_gridsearch(clf, pgrid, xTrain, yTrain, xTest, yTest):
 
 def main():
 
-    bruh = pd.read_csv("50k_sample_processed_t2_p9.csv")
+    bruh = pd.read_csv("first_1000_samples.csv")
     bruh = bruh.dropna()
     soft_skills = bruh["job_skills"]
     job_types = bruh["job_title"]
@@ -122,7 +125,7 @@ def main():
     vectorizer = CountVectorizer()
     X = vectorizer.fit_transform(soft_skills)
 
-    xTrain, xTest, yTrain, yTest = train_test_split(X, job_types, test_size=0.2)
+    xTrain, xTest, yTrain, yTest = train_test_split(X, job_types, test_size=0.3)
 
     parameters = {}
     parameters["n_neighbors"] = [5,10,15]
