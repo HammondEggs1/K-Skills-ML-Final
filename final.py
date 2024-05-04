@@ -150,24 +150,23 @@ def main():
     
     print("KNN COMPLETE!")
     """
-    """
+
     # search grid
     params_grid = {
-        'n_estimators': [100, 300],
-        'learning_rate': [0.01, 0.1],
-        'colsample_bytree': [0.3, 0.5],
-        'max_depth':[2, 3, 5]
+        'n_estimators': [100, 150],
+        'learning_rate': [0.1, 0.25],
+        'max_depth':[3, 5]
     }
-    """
-    # optimal grid
+    # test grid
     
+    """
     params_grid = {
         'n_estimators': [300],
         'learning_rate': [0.01],
         'colsample_bytree': [0.3],
         'max_depth':[5]
     }
-    
+    """
     unique_types = list(set([x for x in job_types]))
     classes = max(job_types)+1
     print(classes)
