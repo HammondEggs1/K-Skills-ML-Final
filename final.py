@@ -3,6 +3,8 @@ import json
 import pandas as pd
 import time
 import numpy as np
+import xgboost as xgb
+import matplotlib.pyplot as plt
 from sklearn.preprocessing import OneHotEncoder
 from sklearn.base import BaseEstimator, ClassifierMixin
 from sklearn.metrics import mean_squared_error, r2_score
@@ -36,7 +38,7 @@ from sklearn.metrics import average_precision_score
 from sklearn.preprocessing import LabelEncoder
 
 
-def eval_gridsearch(clf, pgrid, xTrain, yTrain, xTest, yTest):
+def eval_gridsearch(clf, pgrid, xTrain, yTrain, xTest, yTest, target):
     """
     Given a sklearn classifier and a parameter grid to search,
     choose the optimal parameters from pgrid using Grid Search CV
@@ -57,6 +59,8 @@ def eval_gridsearch(clf, pgrid, xTrain, yTrain, xTest, yTest):
         Test data
     yTest : 1d array with shape m
         Array of labels associated with test data.
+    target: the integer value associated with the job title
+        that roc scores are measured based on
 
     Returns
     -------
@@ -79,12 +83,14 @@ def eval_gridsearch(clf, pgrid, xTrain, yTrain, xTest, yTest):
     bestParams = {}
 
     grid_search = GridSearchCV(clf, pgrid, cv = 5) 
+    print("Begin GS")
     grid_search.fit(xTrain, yTrain) 
     bestParams = grid_search.best_params_
-
+    print(bestParams)
     final_clf = grid_search.best_estimator_
     reg = final_clf.fit(xTrain, yTrain)
     ypred = final_clf.predict(xTest)
+    print(ypred)
 
     # new_ypred = []
     # for i in ypred:
@@ -97,13 +103,18 @@ def eval_gridsearch(clf, pgrid, xTrain, yTrain, xTest, yTest):
     #         new_ypred[i] = int(0)
     # new_ypred = np.array(new_ypred)
 
-    #fpr, tpr, thresholds = metrics.roc_curve(yTest, ypred)
-    roc["fpr"] = 1
-    roc["tpr"] = 2
+    # The main idea of the OvM fpr and tpr is that the target
+    # predictions are turned to 1 while all others are turned
+    # 0, allowing metrics.roc_curve to interpret the multi
+    # class classification as though it were binary
+    roc_yTest = [1 if x == target else 0 for x in yTest]
+    roc_ypred = [1 if x == target else 0 for x in ypred]
+    fpr, tpr, thresholds = metrics.roc_curve(roc_yTest, roc_ypred)
+    roc["fpr"] = fpr
+    roc["tpr"] = tpr
 
     time_lr = time.time() - start
-    resultDict = {'Accuracy': accuracy_score(ypred, yTest),
-        'Best Parameters': bestParams,
+    resultDict = {
         'Time': time_lr}
     # resultDict = {
     #     'AUPRC': average_precision_score(yTest, ypred),
@@ -124,47 +135,58 @@ def main():
     job_types= label_encoder.fit_transform(job_types)
     vectorizer = CountVectorizer()
     X = vectorizer.fit_transform(soft_skills)
+
     xTrain, xTest, yTrain, yTest = train_test_split(X, job_types, test_size=0.3)
-
-    #K Nearest Neighbors
+    """
     parameters = {}
-    parameters["n_neighbors"] = [5,10,50,100,200]
-
+    parameters["n_neighbors"] = [5,10,15]
+    #parameters["algorithm"] = ['ball_tree', 'kd_tree', 'brute']
+    
     knnClf = KNeighborsClassifier()
-    #perfDict, rocDF, bestParamDict = eval_gridsearch(knnClf, parameters, xTrain, yTrain, xTest, yTest)
-    print("KNN")
+    perfDict, rocDF, bestParamDict = eval_gridsearch(knnClf, parameters, xTrain, yTrain, xTest, yTest, 54)
     print(perfDict)
     print(rocDF)
     print(bestParamDict)
-
-    #Decision Tree
-    parameters = {}
-    parameters["criterion"] = ["gini", "entropy"]
-    parameters["max_depth"] = [1,5,10]
-    parameters["min_samples_leaf"] = [5,10,15]
-
-    dtclf = DecisionTreeClassifier()
-    perfDict, rocDF, bestParamDict = eval_gridsearch(dtclf, parameters, xTrain, yTrain, xTest, yTest)
-    print("Decision Tree")
+    
+    print("KNN COMPLETE!")
+    """
+    """
+    # search grid
+    params_grid = {
+        'n_estimators': [100, 300],
+        'learning_rate': [0.01, 0.1],
+        'colsample_bytree': [0.3, 0.5],
+        'max_depth':[2, 3, 5]
+    }
+    """
+    # optimal grid
+    
+    params_grid = {
+        'n_estimators': [300],
+        'learning_rate': [0.01],
+        'colsample_bytree': [0.3],
+        'max_depth':[5]
+    }
+    
+    unique_types = list(set([x for x in job_types]))
+    classes = max(job_types)+1
+    print(classes)
+    xgclf = xgb.XGBRegressor(objective='multi:softmax', num_class=classes)
+    # I chose 54 for the target value as both models predicted it somewhat frequently
+    perfDict, rocDF, bestParamDict = eval_gridsearch(xgclf, params_grid, xTrain, yTrain, xTest, yTest, 54)
     print(perfDict)
     print(rocDF)
     print(bestParamDict)
+   
 
-    #Neural Networks
-    parameters = {}
-    parameters["activation"] = ['identity', 'logistic', 'tanh']
-    parameters["max_iter"] = [100,200,300]
+    plt.plot(rocDF["fpr"], rocDF["tpr"], label="KNN")
+    plt.legend(loc=0)
+    plt.xlabel("False Positive Rate")
+    plt.ylabel("True Positive Rate")
+    plt.title("ROC Curve")
 
-    mlpclf = MLPClassifier(max_iter=10)
-    #perfDict, rocDF, bestParamDict = eval_gridsearch(mlpclf, parameters, xTrain, yTrain, xTest, yTest)
-    print("Neural Networks")
-    print(perfDict)
-    print(rocDF)
-    print(bestParamDict)
-
-
-
-                            
+    plt.show()
+    
 
 if __name__ == "__main__":
     main()
