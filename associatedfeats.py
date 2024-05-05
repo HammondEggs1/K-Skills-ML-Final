@@ -1,4 +1,5 @@
 import pandas as pd
+from joblib import dump, load
 from collections import Counter
 
 # takes a job title and the dataset as input
@@ -38,6 +39,12 @@ def getKLocations(data, k):
 		k_locations.append(location[0])
 	return k_locations
 
+def saveClf(clf, fileName):
+	dump(clf, fileName)
+
+def loadClf(fileName):
+	return load(fileName)
+
 def main():
 	k = 5
 	data = pd.read_csv("linkedin_job_postings.csv")
@@ -46,6 +53,7 @@ def main():
 	companies = getKCompanies(data_subset, k)
 	print(locations)
 	print(companies)
+
 
 if __name__ == "__main__":
     main()

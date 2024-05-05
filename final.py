@@ -36,9 +36,10 @@ from sklearn.neural_network import MLPClassifier
 from tqdm import tqdm
 from sklearn.metrics import average_precision_score
 from sklearn.preprocessing import LabelEncoder
+from helperfunctions import saveClf, loadClf
 
 
-def eval_gridsearch(clf, pgrid, xTrain, yTrain, xTest, yTest, target):
+def eval_gridsearch(clf, pgrid, xTrain, yTrain, xTest, yTest, target, fileName = -1):
     """
     Given a sklearn classifier and a parameter grid to search,
     choose the optimal parameters from pgrid using Grid Search CV
@@ -61,6 +62,8 @@ def eval_gridsearch(clf, pgrid, xTrain, yTrain, xTest, yTest, target):
         Array of labels associated with test data.
     target: the integer value associated with the job title
         that roc scores are measured based on
+    fileName: the name of the file that you want the classifier
+    to be saved to
 
     Returns
     -------
@@ -121,22 +124,30 @@ def eval_gridsearch(clf, pgrid, xTrain, yTrain, xTest, yTest, target):
     #     'F1': f1_score(yTest, ypred),
     #     'Time': time_lr}
     
+    if(fileName!=-1):
+        saveClf(reg, fileName)
     return resultDict, roc, bestParams
 
 
 
 def main():
 
-    bruh = pd.read_csv("first_1000_samples.csv")
+    bruh = pd.read_csv("dataset_bot50_p99.csv")
     bruh = bruh.dropna()
     soft_skills = bruh["job_skills"]
     job_types = bruh["job_title"]
     label_encoder = LabelEncoder()
     job_types= label_encoder.fit_transform(job_types)
+    # In order to later decode back to jobtitles,
+    # the label encoder must be saved
+    saveClf(label_encoder, "label_encoder_bot50.joblib")
     vectorizer = CountVectorizer()
     X = vectorizer.fit_transform(soft_skills)
-
+    vectorizer = vectorizer.fit(soft_skills)
+    saveClf(vectorizer, "vectorizer_bot50.joblib")
+    print(X[1])
     xTrain, xTest, yTrain, yTest = train_test_split(X, job_types, test_size=0.3)
+    
     """
     parameters = {}
     parameters["n_neighbors"] = [5,10,15]
@@ -150,6 +161,7 @@ def main():
     
     print("KNN COMPLETE!")
     """
+   
 
     # search grid
     params_grid = {
@@ -158,48 +170,43 @@ def main():
         'max_depth':[3, 5]
     }
     # test grid
-    
-    """
-    params_grid = {
-        'n_estimators': [300],
-        'learning_rate': [0.01],
-        'colsample_bytree': [0.3],
-        'max_depth':[5]
-    }
-    """
+
     unique_types = list(set([x for x in job_types]))
     classes = max(job_types)+1
-    print(classes)
     xgclf = xgb.XGBRegressor(objective='multi:softmax', num_class=classes)
     # I chose 54 for the target value as both models predicted it somewhat frequently
     perfDict, rocDF, bestParamDict = eval_gridsearch(xgclf, params_grid, xTrain, yTrain, xTest, yTest, 54)
     print(perfDict)
     print(rocDF)
     print(bestParamDict)
-
+   
     #K Nearest Neighbors
-    # parameters = {}
-    # parameters["n_neighbors"] = [5,10,50,100,200]
+    """
+    parameters = {}
+    parameters["n_neighbors"] = [5,10,50,100,200]
 
-    # knnClf = KNeighborsClassifier()
-    # perfDict, rocDF, bestParamDict = eval_gridsearch(knnClf, parameters, xTrain, yTrain, xTest, yTest, 54)
-    # print("KNN")
-    # print(perfDict)
-    # print(rocDF)
-    # print(bestParamDict)
+    knnClf = KNeighborsClassifier()
+    perfDict, rocDF, bestParamDict = eval_gridsearch(knnClf, parameters, xTrain, yTrain, xTest, yTest, 0)
+    print("KNN")
+    print(perfDict)
+    print(rocDF)
+    print(bestParamDict)
+    """
 
     # #Decision Tree
-    # parameters = {}
-    # parameters["criterion"] = ["gini", "entropy"]
-    # parameters["max_depth"] = [1,5,10]
-    # parameters["min_samples_leaf"] = [5,10,15]
+    """
+    parameters = {}
+    parameters["criterion"] = ["gini", "entropy"]
+    parameters["max_depth"] = [1,5,10]
+    parameters["min_samples_leaf"] = [5,10,15]
 
-    # dtclf = DecisionTreeClassifier()
-    # perfDict, rocDF, bestParamDict = eval_gridsearch(dtclf, parameters, xTrain, yTrain, xTest, yTest, 54)
-    # print("Decision Tree")
-    # print(perfDict)
-    # print(rocDF)
-    # print(bestParamDict)
+    dtclf = DecisionTreeClassifier()
+    perfDict, rocDF, bestParamDict = eval_gridsearch(dtclf, parameters, xTrain, yTrain, xTest, yTest, 0, "dt_bot50.joblib")
+    print("Decision Tree")
+    print(perfDict)
+    print(rocDF)
+    print(bestParamDict)
+    """
 
     # #Neural Networks
     # parameters = {}
