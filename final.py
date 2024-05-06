@@ -37,6 +37,8 @@ from tqdm import tqdm
 from sklearn.metrics import average_precision_score
 from sklearn.preprocessing import LabelEncoder
 from helperfunctions import saveClf, loadClf
+from sklearn.naive_bayes import GaussianNB
+
 
 
 def eval_gridsearch(clf, pgrid, xTrain, yTrain, xTest, yTest, target, fileName = -1):
@@ -85,15 +87,13 @@ def eval_gridsearch(clf, pgrid, xTrain, yTrain, xTest, yTest, target, fileName =
     roc = {}
     bestParams = {}
 
-    grid_search = GridSearchCV(clf, pgrid, cv = 5) 
+    grid_search = GridSearchCV(clf, pgrid, cv = 3, verbose=10, n_jobs=-1)
     print("Begin GS")
     grid_search.fit(xTrain, yTrain) 
     bestParams = grid_search.best_params_
-    print(bestParams)
     final_clf = grid_search.best_estimator_
     reg = final_clf.fit(xTrain, yTrain)
     ypred = final_clf.predict(xTest)
-    print(ypred)
 
     # new_ypred = []
     # for i in ypred:
@@ -145,7 +145,6 @@ def main():
     X = vectorizer.fit_transform(soft_skills)
     vectorizer = vectorizer.fit(soft_skills)
     saveClf(vectorizer, "vectorizer_bot50.joblib")
-    print(X[1])
     xTrain, xTest, yTrain, yTest = train_test_split(X, job_types, test_size=0.3)
     
     """
@@ -162,24 +161,22 @@ def main():
     print("KNN COMPLETE!")
     """
    
-
     # search grid
     params_grid = {
-        'n_estimators': [100, 150],
-        'learning_rate': [0.1, 0.25],
-        'max_depth':[3, 5]
+        'n_estimators': [50, 100],
+        'learning_rate': [0.3, 0.5],
+        'max_depth':[2, 4]
     }
-    # test grid
 
     unique_types = list(set([x for x in job_types]))
     classes = max(job_types)+1
     xgclf = xgb.XGBRegressor(objective='multi:softmax', num_class=classes)
     # I chose 54 for the target value as both models predicted it somewhat frequently
-    perfDict, rocDF, bestParamDict = eval_gridsearch(xgclf, params_grid, xTrain, yTrain, xTest, yTest, 54)
+    perfDict, rocDF, bestParamDict = eval_gridsearch(xgclf, params_grid, xTrain, yTrain, xTest, yTest, 0, "XGB_bot50.joblib")
     print(perfDict)
     print(rocDF)
     print(bestParamDict)
-   
+
     #K Nearest Neighbors
     """
     parameters = {}
@@ -221,7 +218,17 @@ def main():
     # print(bestParamDict)
 
 
-
+    #Naive Bayes
+    """
+    parameters = {}
+    parameters['var_smoothing'] = [1e-9, 1e-8, 1e-7, 1e-6, 1e-5]
+    gnbclf = GaussianNB()
+    perfDict, rocDF, bestParamDict = eval_gridsearch(gnbclf, parameters, xTrain, yTrain, xTest, yTest, 0, "nb_bot50.joblib")
+    print("Naive Bayes")
+    print(perfDict)
+    print(rocDF)
+    print(bestParamDict)
+    """
 
 
     

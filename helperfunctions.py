@@ -13,7 +13,6 @@ def getSubset(title, data):
 		if(sample_title == title):
 			indices.append(i)
 	# Takes a subset of our data dfs based on indices
-	print(type(data))
 	data_subset = data.iloc[indices]
 	return data_subset
 
@@ -53,7 +52,6 @@ def modelPredict(skills, fileName):
 	vectorizer = loadClf("vectorizer_bot50.joblib")
 	skills = pd.Series(skills)
 	xTest = vectorizer.transform(skills)
-	print(xTest)
 	clf = loadClf(fileName)
 	y = clf.predict(xTest)
 	encoder = loadClf("label_encoder_bot50.joblib")
