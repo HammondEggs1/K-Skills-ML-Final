@@ -95,17 +95,6 @@ def eval_gridsearch(clf, pgrid, xTrain, yTrain, xTest, yTest, target, fileName =
     reg = final_clf.fit(xTrain, yTrain)
     ypred = final_clf.predict(xTest)
 
-    # new_ypred = []
-    # for i in ypred:
-    #     new_ypred.append(i)
-    
-    # for i in range(len(new_ypred)):
-    #     if new_ypred[i] >= 0.5:
-    #         new_ypred[i] = int(1)
-    #     else:
-    #         new_ypred[i] = int(0)
-    # new_ypred = np.array(new_ypred)
-
     # The main idea of the OvM fpr and tpr is that the target
     # predictions are turned to 1 while all others are turned
     # 0, allowing metrics.roc_curve to interpret the multi
@@ -128,11 +117,32 @@ def eval_gridsearch(clf, pgrid, xTrain, yTrain, xTest, yTest, target, fileName =
         saveClf(reg, fileName)
     return resultDict, roc, bestParams
 
+def eval_model(clf, xTrain, yTrain, xTest, yTest, target, fileName = -1):
+    start = time.time()
+    roc = {}
+    bestParams = {}
+    clf.fit(xTrain, yTrain)
+    ypred = clf.predict(xTest)
+    bin_yTest = [1 if x == target else 0 for x in yTest]
+    bin_ypred = [1 if x == target else 0 for x in ypred]
+    fpr, tpr, thresholds = metrics.roc_curve(bin_yTest, bin_ypred)
+    roc["fpr"] = fpr
+    roc["tpr"] = tpr
 
+    if(fileName!=-1):
+        saveClf(clf, fileName)
+
+    time_lr = time.time() - start
+    resultDict = {
+         'AUPRC': average_precision_score(bin_yTest, bin_ypred),
+         'F1': f1_score(bin_yTest, bin_ypred),
+         'Time': time_lr}
+    
+    return resultDict, roc, bestParams
 
 def main():
 
-    bruh = pd.read_csv("dataset_bot50_p99.csv")
+    bruh = pd.read_csv("further_processed_dataset.csv")
     bruh = bruh.dropna()
     soft_skills = bruh["job_skills"]
     job_types = bruh["job_title"]
@@ -140,55 +150,46 @@ def main():
     job_types= label_encoder.fit_transform(job_types)
     # In order to later decode back to jobtitles,
     # the label encoder must be saved
-    saveClf(label_encoder, "label_encoder_bot50.joblib")
+    saveClf(label_encoder, "label_encoder_fpd.joblib")
     vectorizer = CountVectorizer()
     X = vectorizer.fit_transform(soft_skills)
     vectorizer = vectorizer.fit(soft_skills)
-    saveClf(vectorizer, "vectorizer_bot50.joblib")
+    saveClf(vectorizer, "vectorizer_fpd.joblib")
     xTrain, xTest, yTrain, yTest = train_test_split(X, job_types, test_size=0.3)
     
-    """
-    parameters = {}
-    parameters["n_neighbors"] = [5,10,15]
-    #parameters["algorithm"] = ['ball_tree', 'kd_tree', 'brute']
-    
-    knnClf = KNeighborsClassifier()
-    perfDict, rocDF, bestParamDict = eval_gridsearch(knnClf, parameters, xTrain, yTrain, xTest, yTest, 54)
-    print(perfDict)
-    print(rocDF)
-    print(bestParamDict)
-    
-    print("KNN COMPLETE!")
-    """
-   
-    # search grid
-    params_grid = {
-        'n_estimators': [50, 100],
-        'learning_rate': [0.3, 0.5],
-        'max_depth':[2, 4]
-    }
-
-    unique_types = list(set([x for x in job_types]))
-    classes = max(job_types)+1
-    xgclf = xgb.XGBRegressor(objective='multi:softmax', num_class=classes)
-    # I chose 54 for the target value as both models predicted it somewhat frequently
-    perfDict, rocDF, bestParamDict = eval_gridsearch(xgclf, params_grid, xTrain, yTrain, xTest, yTest, 0, "XGB_bot50.joblib")
-    print(perfDict)
-    print(rocDF)
-    print(bestParamDict)
-
     #K Nearest Neighbors
-    """
+
     parameters = {}
     parameters["n_neighbors"] = [5,10,50,100,200]
 
-    knnClf = KNeighborsClassifier()
-    perfDict, rocDF, bestParamDict = eval_gridsearch(knnClf, parameters, xTrain, yTrain, xTest, yTest, 0)
+    # For grid searching
+    # knnClf = KNeighborsClassifier()
+    knnClf = KNeighborsClassifier(n_neighbors=5)
+    # perfDict, rocDF, bestParamDict = eval_gridsearch(knnClf, parameters, xTrain, yTrain, xTest, yTest, 0)
+    perfDict, rocDF, bestParamDict = eval_model(knnClf, xTrain, yTrain, xTest, yTest, 0, "KNN_fpd.joblib")
     print("KNN")
     print(perfDict)
     print(rocDF)
     print(bestParamDict)
-    """
+   
+    # search grid
+    params_grid = {
+        'learning_rate': [0.1, 0.25],
+        'max_depth':[2, 3],
+        "n_estimators": [50, 75, 100]
+    }
+
+    classes = max(job_types)+1
+    # for grid searching
+    # xgclf = xgb.XGBRegressor(objective='multi:softmax', num_class=classes)
+    xgclf = xgb.XGBRegressor(objective='multi:softmax', n_estimators=100, max_depth=3, num_class=classes)
+    setattr(xgclf, 'verbosity', 2)
+    #perfDict, rocDF, bestParamDict = eval_gridsearch(xgclf, params_grid, xTrain, yTrain, xTest, yTest, 0, "XGB_fpd.joblib")
+    perfDict, rocDF, bestParamDict = eval_model(xgclf, xTrain, yTrain, xTest, yTest, 0, "XGB_fpd.joblib")
+    print(perfDict)
+    print(rocDF)
+    print(bestParamDict)
+
 
     # #Decision Tree
     """
@@ -198,7 +199,7 @@ def main():
     parameters["min_samples_leaf"] = [5,10,15]
 
     dtclf = DecisionTreeClassifier()
-    perfDict, rocDF, bestParamDict = eval_gridsearch(dtclf, parameters, xTrain, yTrain, xTest, yTest, 0, "dt_bot50.joblib")
+    perfDict, rocDF, bestParamDict = eval_gridsearch(dtclf, parameters, xTrain, yTrain, xTest, yTest, 0, "dt_fpd.joblib")
     print("Decision Tree")
     print(perfDict)
     print(rocDF)
