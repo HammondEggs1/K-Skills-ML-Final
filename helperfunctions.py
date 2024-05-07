@@ -49,14 +49,15 @@ def loadClf(fileName):
 # fileName is the file name of an existing classifier
 def modelPredict(skills, fileName):
 	prediction = {}
-	vectorizer = loadClf("vectorizer_bot50.joblib")
+	vectorizer = loadClf("vectorizer_fpd.joblib")
 	skills = pd.Series(skills)
 	xTest = vectorizer.transform(skills)
 	clf = loadClf(fileName)
 	y = clf.predict(xTest)
-	encoder = loadClf("label_encoder_bot50.joblib")
+	y = [int(x) for x in y]
+	encoder = loadClf("label_encoder_fpd.joblib")
 	prediction["title"] = encoder.inverse_transform(y)
-	data = pd.read_csv("dataset_bot50_p99.csv")
+	data = pd.read_csv("further_processed_dataset.csv")
 	data_subset = getSubset(prediction["title"][0], data)
 	k = 3
 	companies = getKCompanies(data_subset, k)
@@ -65,14 +66,42 @@ def modelPredict(skills, fileName):
 	return prediction
 
 def main():
-	skills1 = "SQL, Azure, JQuery, HTML5, CSS3, Kotlin, C#, Visual Studio"
-	skills2 = "Restaurant Experience, Communicaation skills, Team Work, Food Preparation"
-	skills3 = "Microsoft Office Suite, Adobe, Accounting, Payroll, Time management, Organization"
-	prediction = modelPredict(skills3, "dt_bot50.joblib")
+	skills1 = "Java, C, SQL, PostGreSQL, Database Systems, Kotlin, Python, Machine Learning, Artificial Intelligence, Quantum Computing, CSS, HTML, HTML5, CSS3, Web Development, Android Studio, Visual Studio, Android Development, App Development, Android SDKs, Agile methodologies, Debugging, Frameworks, Git, Unit Testing, Mobile App Development, APIs"
+	skills2 = "Food Safety, Internal Communication, Inventory Management, Daily Maintenance, Cleanliness, Quality Food Production, Exceptional Customer Service, Safety, Security, Scheduling, Training, Leadership, Restaurant, Retail, Hospitality, English, High School"
+	skills3 = "Medical, Documentation, Patient Care, PCU experience, BLS, ACLS, EPIC, Mentoring, Fall prevention documentation, Stroke documentation, Physician communication, Appointment scheduling, Skin assessments, Care Partners, LPN/LVN"
+	"""
+	print("KNN:")
+	prediction = modelPredict(skills, "knn_fpd.joblib")
 	print(prediction["title"][0])
 	print(prediction["company"])
 	print(prediction["location"])
-
+	print("XGB:")
+	prediction = modelPredict(skills, "XGB_fpd.joblib")
+	print(prediction["title"][0])
+	print(prediction["company"])
+	print(prediction["location"])
+	print("DT:")
+	prediction = modelPredict(skills, "DT_fpd.joblib")
+	print(prediction["title"][0])
+	print(prediction["company"])
+	print(prediction["location"])
+	"""
+	print("NN, skills1:")
+	prediction = modelPredict(skills1, "mlp_fpd.joblib")
+	print(prediction["title"][0])
+	print(prediction["company"])
+	print(prediction["location"])
+	print("NN, skills2:")
+	prediction = modelPredict(skills2, "mlp_fpd.joblib")
+	print(prediction["title"][0])
+	print(prediction["company"])
+	print(prediction["location"])
+	print("NN, skills3:")
+	prediction = modelPredict(skills3, "mlp_fpd.joblib")
+	print(prediction["title"][0])
+	print(prediction["company"])
+	print(prediction["location"])
+	
 
 if __name__ == "__main__":
     main()
