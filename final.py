@@ -234,7 +234,7 @@ def main():
 
     
    
-
+    #We changed the labels depending on which method we were testing
     plt.plot(rocDF["fpr"], rocDF["tpr"], label="KNN")
     plt.legend(loc=0)
     plt.xlabel("False Positive Rate")
