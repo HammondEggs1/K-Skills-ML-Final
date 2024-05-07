@@ -117,7 +117,7 @@ def eval_gridsearch(clf, pgrid, xTrain, yTrain, xTest, yTest, target, fileName =
     roc["tpr"] = tpr
 
     time_lr = time.time() - start
-    resultDict = {
+    resultDict = {'Accuracy': accuracy_score(ypred, yTest),
         'Time': time_lr}
     # resultDict = {
     #     'AUPRC': average_precision_score(yTest, ypred),
