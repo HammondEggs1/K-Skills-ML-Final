@@ -208,8 +208,8 @@ def main():
 
     # #Neural Networks
     # parameters = {}
-    # parameters["activation"] = ['identity', 'logistic', 'tanh']
-    # parameters["max_iter"] = [100,200,300]
+    # parameters["activation"] = ['identity']
+    # parameters["max_iter"] = [10]
 
     # mlpclf = MLPClassifier(max_iter=10)
     # perfDict, rocDF, bestParamDict = eval_gridsearch(mlpclf, parameters, xTrain, yTrain, xTest, yTest, 54)
