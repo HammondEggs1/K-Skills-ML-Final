@@ -1,7 +1,6 @@
 import argparse
 import pandas as pd
 def main():
-# set up the program to take in arguments from the command line
     parser = argparse.ArgumentParser()
     parser.add_argument("job_skills",
                         # default="job_skills.csv",
